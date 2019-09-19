@@ -12,7 +12,7 @@ Pod::Spec.new do |s|
   s.license      = package["license"]
   s.platform     = :ios, "9.0"
 
-  s.source       = { :git => "https://github.com/shimohq/react-native-albums", :tag => "v#{s.version}" }
+  s.source       = { :git => "https://github.com/myalbum/react-native-albums.git", :tag => "v#{s.version}" }
   s.source_files  = "ios/**/*.{h,m}"
 
   s.dependency "React"
