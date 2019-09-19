@@ -1,12 +1,13 @@
 {
     "name": "react-native-albums",
-    "version": "0.0.2",
+    "version": "1.0.2",
     "description": "A react-native library to get gallery album list",
     "repository": {
         "type": "git",
-        "url": "https://github.com/shimohq/react-native-albums"
+        "url": "https://github.com/myalbum/react-native-albums"
     },
-    "author": "shimohq",
+    "author": "MyAlbum",
+    "homepage": "https://myalbum.com",
     "license": "MIT",
     "keywords": [
         "react-component",
