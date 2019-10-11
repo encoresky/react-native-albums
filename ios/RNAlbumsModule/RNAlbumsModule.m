@@ -21,22 +21,23 @@ static BOOL isAlbumTypeSupported(PHAssetCollectionSubtype type);
 NSMutableArray *albumName;
 NSMutableDictionary *dictionary;
 NSMutableArray *albumWithData;
-
+ALAssetsLibrary *library;
+NSArray *imageArray;
+NSMutableArray *mutableArray;
+static int count=0;
 RCT_EXPORT_MODULE();
 
-RCT_EXPORT_METHOD(getAlbumList:(NSDictionary *)options
+RCT_EXPORT_METHOD(getAllAlbumWithData:(NSDictionary *)options
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
     [RNAlbumsModule authorize:^(BOOL authorized) {
-        NSLog( @"ALBUM ==>");
         if (authorized) {
             PHFetchResult *result;
             albumName = [NSMutableArray array];
             albumWithData = [NSMutableArray array];
             dictionary = [[NSMutableDictionary alloc] init];
             result = [PHAssetCollection fetchAssetCollectionsWithType:PHAssetCollectionTypeAlbum subtype:PHAssetCollectionSubtypeAlbumRegular options:nil];
-            
             if (result.count == 0) {
                 NSMutableDictionary *resultDictionary = [[NSMutableDictionary alloc] init];
                 [resultDictionary setObject:albumName forKey:@"albums"];
@@ -44,18 +45,16 @@ RCT_EXPORT_METHOD(getAlbumList:(NSDictionary *)options
                 resolve(resultDictionary);
                 return;
             }
-            for (int i = 0; i < result.count ; i++) {
-                [albumName addObject:[result[i] title]];
-                PHFetchResult *collectionResult = [PHAsset fetchAssetsInAssetCollection:result[i] options:nil];
+            for (PHAssetCollection *obj in result) {
+                [albumName addObject:obj.localizedTitle];
+                PHFetchResult *collectionResult = [PHAsset fetchAssetsInAssetCollection:obj options:nil];
                 if (collectionResult.count != 0) {
-                    NSLog( @"albumWithData %@", albumWithData);
-                    [albumWithData addObject:[result[i] title]];
+                    [albumWithData addObject:obj.localizedTitle];
                 }else{
                     __block NSMutableArray *list = [NSMutableArray array];
-                    [dictionary setObject:list forKey:[result[i] title]];
+                    [dictionary setObject:list forKey:obj.localizedTitle];
                 }
             }
-            
             
             for (int i = 0; i < albumWithData.count; i++) {
                 __block PHAssetCollection *collection;
@@ -70,8 +69,7 @@ RCT_EXPORT_METHOD(getAlbumList:(NSDictionary *)options
                 __block NSMutableArray *list = [NSMutableArray array];
                 
                 [collectionResult enumerateObjectsUsingBlock:^(PHAsset *asset, NSUInteger idx, BOOL *stop) {
-                    
-                    //            NSLog( [asset mediaType] == PHAssetMediaTypeImage ? @"TRUE" : @"FALSE");
+                   
                     
                     PHImageRequestOptions * imageRequestOptions = [[PHImageRequestOptions alloc] init];
                     [[PHImageManager defaultManager]
@@ -87,7 +85,7 @@ RCT_EXPORT_METHOD(getAlbumList:(NSDictionary *)options
                          if ([info objectForKey:@"PHImageFileURLKey"]) {
                              NSURL *path = [info objectForKey:@"PHImageFileURLKey"];
                              
-                             NSString *assetType = [asset mediaType] == PHAssetMediaTypeImage ? @"ALAssetTypePhoto" : @"ALAssetTypeVideo";
+                             NSString *assetType = [asset mediaType] == PHAssetMediaTypeImage ? @"image" : @"video";
                              [image setObject:path.absoluteString forKey:@"uri"];
                              [node setObject:assetType forKey:@"type"];
                              [node setObject:image forKey:@"image"];
@@ -113,6 +111,113 @@ RCT_EXPORT_METHOD(getAlbumList:(NSDictionary *)options
         }
     }];
 }
+
+
+
+RCT_EXPORT_METHOD(getAllImageList:(NSDictionary *)options
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+    imageArray=[[NSArray alloc] init];
+    __block NSMutableArray *albumArray = [NSMutableArray array];
+    PHFetchResult *result;
+    result = [PHAssetCollection fetchAssetCollectionsWithType:PHAssetCollectionTypeAlbum subtype:PHAssetCollectionSubtypeAlbumRegular options:nil];
+    for (PHAssetCollection *obj in result) {
+        [albumArray addObject:obj.localizedTitle];
+    }
+
+    
+    NSMutableArray* assetURLDictionaries = [[NSMutableArray alloc] init];
+    
+    PHFetchResult *results = [PHAsset fetchAssetsWithMediaType:PHAssetMediaTypeImage options:nil];
+    NSMutableArray *temp = [NSMutableArray arrayWithCapacity:results.count];
+    __block NSMutableArray *list = [NSMutableArray array];
+
+    [results enumerateObjectsUsingBlock:^(PHAsset *asset, NSUInteger idx, BOOL * _Nonnull stop) {
+        [temp addObject:asset];
+        PHImageRequestOptions * imageRequestOptions = [[PHImageRequestOptions alloc] init];
+                           [[PHImageManager defaultManager]
+                            requestImageDataForAsset:asset
+                            options:imageRequestOptions
+                            resultHandler:^(NSData *imageData, NSString *dataUTI,
+                                            UIImageOrientation orientation,
+                                            NSDictionary *info)
+                            {
+                                __block NSMutableDictionary *imageObj = [[NSMutableDictionary alloc] init];
+                                NSMutableDictionary *image = [[NSMutableDictionary alloc] init];
+                                NSMutableDictionary *node = [[NSMutableDictionary alloc] init];
+                                if ([info objectForKey:@"PHImageFileURLKey"]) {
+                                    NSURL *path = [info objectForKey:@"PHImageFileURLKey"];
+                                    
+                                    NSString *assetType = [asset mediaType] == PHAssetMediaTypeImage ? @"image" : @"video";
+                                    [image setObject:path.absoluteString forKey:@"uri"];
+                                    [node setObject:assetType forKey:@"type"];
+                                    [node setObject:image forKey:@"image"];
+                                    [imageObj setObject:node forKey:@"node"];
+                                    [list addObject:imageObj];
+                                }
+                                if (results.count - 1 == idx) {
+                                    NSMutableDictionary *resultDictionary = [[NSMutableDictionary alloc] init];
+                                    [resultDictionary setObject:albumArray forKey:@"albums"];
+                                    [resultDictionary setObject:list forKey:@"images"];
+//                                    NSLog( @"list ===> %@ \n", resultDictionary);
+                                    resolve(resultDictionary);
+                                }
+                            }];
+    }];
+}
+
+RCT_EXPORT_METHOD(getImagesByAlbumName:(NSDictionary *)options
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+    if(options && [options objectForKey:@"albumName"]){
+            __block NSString *albumName = options[@"albumName"];
+            __block PHAssetCollection *collection;
+            PHFetchOptions *fetchOptions = [[PHFetchOptions alloc] init];
+            fetchOptions.predicate = [NSPredicate predicateWithFormat:@"title = %@", albumName];
+            collection = [PHAssetCollection fetchAssetCollectionsWithType:PHAssetCollectionTypeAlbum
+                                                                  subtype:PHAssetCollectionSubtypeAny
+                                                                  options:fetchOptions].firstObject;
+            
+            NSMutableDictionary *albums = [[NSMutableDictionary alloc] init];
+            PHFetchResult *collectionResult = [PHAsset fetchAssetsInAssetCollection:collection options:nil];
+            __block NSMutableArray *list = [NSMutableArray array];
+            
+            [collectionResult enumerateObjectsUsingBlock:^(PHAsset *asset, NSUInteger idx, BOOL *stop) {
+               
+                
+                PHImageRequestOptions * imageRequestOptions = [[PHImageRequestOptions alloc] init];
+                [[PHImageManager defaultManager]
+                 requestImageDataForAsset:asset
+                 options:imageRequestOptions
+                 resultHandler:^(NSData *imageData, NSString *dataUTI,
+                                 UIImageOrientation orientation,
+                                 NSDictionary *info)
+                 {
+                     __block NSMutableDictionary *imageObj = [[NSMutableDictionary alloc] init];
+                     NSMutableDictionary *image = [[NSMutableDictionary alloc] init];
+                     NSMutableDictionary *node = [[NSMutableDictionary alloc] init];
+                     if ([info objectForKey:@"PHImageFileURLKey"]) {
+                         NSURL *path = [info objectForKey:@"PHImageFileURLKey"];
+                         
+                         NSString *assetType = [asset mediaType] == PHAssetMediaTypeImage ? @"image" : @"video";
+                         [image setObject:path.absoluteString forKey:@"uri"];
+                         [node setObject:assetType forKey:@"type"];
+                         [node setObject:image forKey:@"image"];
+                         [imageObj setObject:node forKey:@"node"];
+                         [list addObject:imageObj];
+                     }
+                     if (collectionResult.count - 1 == idx) {
+                         resolve(list);
+                     }
+                 }];
+            }];
+    }else{
+        
+    }
+}
+
 
 typedef void (^authorizeCompletion)(BOOL);
 
@@ -175,4 +280,3 @@ static BOOL isAlbumTypeSupported(PHAssetCollectionSubtype type) {
             return NO;
     }
 }
-
