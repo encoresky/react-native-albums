@@ -37,6 +37,7 @@ RCT_EXPORT_METHOD(getAllAlbumWithData:(NSDictionary *)options
             albumName = [NSMutableArray array];
             albumWithData = [NSMutableArray array];
             dictionary = [[NSMutableDictionary alloc] init];
+
             result = [PHAssetCollection fetchAssetCollectionsWithType:PHAssetCollectionTypeAlbum subtype:PHAssetCollectionSubtypeAlbumRegular options:nil];
             if (result.count == 0) {
                 NSMutableDictionary *resultDictionary = [[NSMutableDictionary alloc] init];
@@ -69,39 +70,29 @@ RCT_EXPORT_METHOD(getAllAlbumWithData:(NSDictionary *)options
                 __block NSMutableArray *list = [NSMutableArray array];
                 
                 [collectionResult enumerateObjectsUsingBlock:^(PHAsset *asset, NSUInteger idx, BOOL *stop) {
-                   
                     
-                    PHImageRequestOptions * imageRequestOptions = [[PHImageRequestOptions alloc] init];
-                    [[PHImageManager defaultManager]
-                     requestImageDataForAsset:asset
-                     options:imageRequestOptions
-                     resultHandler:^(NSData *imageData, NSString *dataUTI,
-                                     UIImageOrientation orientation,
-                                     NSDictionary *info)
-                     {
-                         __block NSMutableDictionary *imageObj = [[NSMutableDictionary alloc] init];
-                         NSMutableDictionary *image = [[NSMutableDictionary alloc] init];
-                         NSMutableDictionary *node = [[NSMutableDictionary alloc] init];
-                         if ([info objectForKey:@"PHImageFileURLKey"]) {
-                             NSURL *path = [info objectForKey:@"PHImageFileURLKey"];
-                             
-                             NSString *assetType = [asset mediaType] == PHAssetMediaTypeImage ? @"image" : @"video";
-                             [image setObject:path.absoluteString forKey:@"uri"];
-                             [node setObject:assetType forKey:@"type"];
-                             [node setObject:image forKey:@"image"];
-                             [imageObj setObject:node forKey:@"node"];
-                            [list addObject:imageObj];
-                         }
-                         if (collectionResult.count - 1 == idx) {
-                             [dictionary setObject:list forKey:albumWithData[i]];
-                             if (i == albumWithData.count - 1) {
-                                 NSMutableDictionary *resultDictionary = [[NSMutableDictionary alloc] init];
-                                 [resultDictionary setObject:albumName forKey:@"albums"];
-                                 [resultDictionary setObject:dictionary forKey:@"images"];
-                                 resolve(resultDictionary);
-                             }
-                         }
-                     }];
+                    
+                    __block NSMutableDictionary *imageObj = [[NSMutableDictionary alloc] init];
+                    NSMutableDictionary *image = [[NSMutableDictionary alloc] init];
+                    NSMutableDictionary *node = [[NSMutableDictionary alloc] init];
+                    
+                    NSString *path = [NSString stringWithFormat:@"ph://%@", asset.localIdentifier];
+                    
+                    NSString *assetType = [asset mediaType] == PHAssetMediaTypeImage ? @"image" : @"video";
+                    [image setObject:path forKey:@"uri"];
+                    [node setObject:assetType forKey:@"type"];
+                    [node setObject:image forKey:@"image"];
+                    [imageObj setObject:node forKey:@"node"];
+                    [list addObject:imageObj];
+                    if (collectionResult.count - 1 == idx) {
+                        [dictionary setObject:list forKey:albumWithData[i]];
+                        if (i == albumWithData.count - 1) {
+                            NSMutableDictionary *resultDictionary = [[NSMutableDictionary alloc] init];
+                            [resultDictionary setObject:albumName forKey:@"albums"];
+                            [resultDictionary setObject:dictionary forKey:@"images"];
+                            resolve(resultDictionary);
+                        }
+                    }
                 }];
             }
         } else {
@@ -125,45 +116,33 @@ RCT_EXPORT_METHOD(getAllImageList:(NSDictionary *)options
     for (PHAssetCollection *obj in result) {
         [albumArray addObject:obj.localizedTitle];
     }
+    
+    
+    PHFetchOptions *fetchOptions = [[PHFetchOptions alloc] init];
 
-    
-    NSMutableArray* assetURLDictionaries = [[NSMutableArray alloc] init];
-    
-    PHFetchResult *results = [PHAsset fetchAssetsWithMediaType:PHAssetMediaTypeImage options:nil];
-    NSMutableArray *temp = [NSMutableArray arrayWithCapacity:results.count];
+    PHFetchResult *results = [PHAsset fetchAssetsWithOptions:fetchOptions];
     __block NSMutableArray *list = [NSMutableArray array];
-
+    
     [results enumerateObjectsUsingBlock:^(PHAsset *asset, NSUInteger idx, BOOL * _Nonnull stop) {
-        [temp addObject:asset];
-        PHImageRequestOptions * imageRequestOptions = [[PHImageRequestOptions alloc] init];
-                           [[PHImageManager defaultManager]
-                            requestImageDataForAsset:asset
-                            options:imageRequestOptions
-                            resultHandler:^(NSData *imageData, NSString *dataUTI,
-                                            UIImageOrientation orientation,
-                                            NSDictionary *info)
-                            {
-                                __block NSMutableDictionary *imageObj = [[NSMutableDictionary alloc] init];
-                                NSMutableDictionary *image = [[NSMutableDictionary alloc] init];
-                                NSMutableDictionary *node = [[NSMutableDictionary alloc] init];
-                                if ([info objectForKey:@"PHImageFileURLKey"]) {
-                                    NSURL *path = [info objectForKey:@"PHImageFileURLKey"];
-                                    
-                                    NSString *assetType = [asset mediaType] == PHAssetMediaTypeImage ? @"image" : @"video";
-                                    [image setObject:path.absoluteString forKey:@"uri"];
-                                    [node setObject:assetType forKey:@"type"];
-                                    [node setObject:image forKey:@"image"];
-                                    [imageObj setObject:node forKey:@"node"];
-                                    [list addObject:imageObj];
-                                }
-                                if (results.count - 1 == idx) {
-                                    NSMutableDictionary *resultDictionary = [[NSMutableDictionary alloc] init];
-                                    [resultDictionary setObject:albumArray forKey:@"albums"];
-                                    [resultDictionary setObject:list forKey:@"images"];
-//                                    NSLog( @"list ===> %@ \n", resultDictionary);
-                                    resolve(resultDictionary);
-                                }
-                            }];
+        __block NSMutableDictionary *imageObj = [[NSMutableDictionary alloc] init];
+        NSMutableDictionary *image = [[NSMutableDictionary alloc] init];
+        NSMutableDictionary *node = [[NSMutableDictionary alloc] init];
+        
+        NSString *path = [NSString stringWithFormat:@"ph://%@", asset.localIdentifier];
+        NSString *assetType = [asset mediaType] == PHAssetMediaTypeImage ? @"image" : @"video";
+        [image setObject:path forKey:@"uri"];
+        [node setObject:assetType forKey:@"type"];
+        [node setObject:image forKey:@"image"];
+        [imageObj setObject:node forKey:@"node"];
+        [list addObject:imageObj];
+        
+        if (results.count - 1 == idx) {
+            NSMutableDictionary *resultDictionary = [[NSMutableDictionary alloc] init];
+            [resultDictionary setObject:albumArray forKey:@"albums"];
+            [resultDictionary setObject:list forKey:@"images"];
+            //                                    NSLog( @"list ===> %@ \n", resultDictionary);
+            resolve(resultDictionary);
+        }
     }];
 }
 
@@ -172,47 +151,36 @@ RCT_EXPORT_METHOD(getImagesByAlbumName:(NSDictionary *)options
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
     if(options && [options objectForKey:@"albumName"]){
-            __block NSString *albumName = options[@"albumName"];
-            __block PHAssetCollection *collection;
-            PHFetchOptions *fetchOptions = [[PHFetchOptions alloc] init];
-            fetchOptions.predicate = [NSPredicate predicateWithFormat:@"title = %@", albumName];
-            collection = [PHAssetCollection fetchAssetCollectionsWithType:PHAssetCollectionTypeAlbum
-                                                                  subtype:PHAssetCollectionSubtypeAny
-                                                                  options:fetchOptions].firstObject;
+        __block NSString *albumName = options[@"albumName"];
+        __block PHAssetCollection *collection;
+        PHFetchOptions *fetchOptions = [[PHFetchOptions alloc] init];
+        fetchOptions.predicate = [NSPredicate predicateWithFormat:@"title = %@", albumName];
+        collection = [PHAssetCollection fetchAssetCollectionsWithType:PHAssetCollectionTypeAlbum
+                                                              subtype:PHAssetCollectionSubtypeAny
+                                                              options:fetchOptions].firstObject;
+        
+        NSMutableDictionary *albums = [[NSMutableDictionary alloc] init];
+        PHFetchResult *collectionResult = [PHAsset fetchAssetsInAssetCollection:collection options:nil];
+        __block NSMutableArray *list = [NSMutableArray array];
+        
+        [collectionResult enumerateObjectsUsingBlock:^(PHAsset *asset, NSUInteger idx, BOOL *stop) {
             
-            NSMutableDictionary *albums = [[NSMutableDictionary alloc] init];
-            PHFetchResult *collectionResult = [PHAsset fetchAssetsInAssetCollection:collection options:nil];
-            __block NSMutableArray *list = [NSMutableArray array];
+            __block NSMutableDictionary *imageObj = [[NSMutableDictionary alloc] init];
+            NSMutableDictionary *image = [[NSMutableDictionary alloc] init];
+            NSMutableDictionary *node = [[NSMutableDictionary alloc] init];
+            NSString *path = [NSString stringWithFormat:@"ph://%@", asset.localIdentifier];
             
-            [collectionResult enumerateObjectsUsingBlock:^(PHAsset *asset, NSUInteger idx, BOOL *stop) {
-               
-                
-                PHImageRequestOptions * imageRequestOptions = [[PHImageRequestOptions alloc] init];
-                [[PHImageManager defaultManager]
-                 requestImageDataForAsset:asset
-                 options:imageRequestOptions
-                 resultHandler:^(NSData *imageData, NSString *dataUTI,
-                                 UIImageOrientation orientation,
-                                 NSDictionary *info)
-                 {
-                     __block NSMutableDictionary *imageObj = [[NSMutableDictionary alloc] init];
-                     NSMutableDictionary *image = [[NSMutableDictionary alloc] init];
-                     NSMutableDictionary *node = [[NSMutableDictionary alloc] init];
-                     if ([info objectForKey:@"PHImageFileURLKey"]) {
-                         NSURL *path = [info objectForKey:@"PHImageFileURLKey"];
-                         
-                         NSString *assetType = [asset mediaType] == PHAssetMediaTypeImage ? @"image" : @"video";
-                         [image setObject:path.absoluteString forKey:@"uri"];
-                         [node setObject:assetType forKey:@"type"];
-                         [node setObject:image forKey:@"image"];
-                         [imageObj setObject:node forKey:@"node"];
-                         [list addObject:imageObj];
-                     }
-                     if (collectionResult.count - 1 == idx) {
-                         resolve(list);
-                     }
-                 }];
-            }];
+            NSString *assetType = [asset mediaType] == PHAssetMediaTypeImage ? @"image" : @"video";
+            [image setObject:path forKey:@"uri"];
+            [node setObject:assetType forKey:@"type"];
+            [node setObject:image forKey:@"image"];
+            [imageObj setObject:node forKey:@"node"];
+            [list addObject:imageObj];
+            if (collectionResult.count - 1 == idx) {
+                resolve(list);
+            }
+            
+        }];
     }else{
         
     }
