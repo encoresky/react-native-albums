@@ -39,13 +39,6 @@ RCT_EXPORT_METHOD(getAllAlbumWithData:(NSDictionary *)options
             dictionary = [[NSMutableDictionary alloc] init];
 
             result = [PHAssetCollection fetchAssetCollectionsWithType:PHAssetCollectionTypeAlbum subtype:PHAssetCollectionSubtypeAlbumRegular options:nil];
-            if (result.count == 0) {
-                NSMutableDictionary *resultDictionary = [[NSMutableDictionary alloc] init];
-                [resultDictionary setObject:albumName forKey:@"albums"];
-                [resultDictionary setObject:dictionary forKey:@"images"];
-                resolve(resultDictionary);
-                return;
-            }
             for (PHAssetCollection *obj in result) {
                 [albumName addObject:obj.localizedTitle];
                 PHFetchResult *collectionResult = [PHAsset fetchAssetsInAssetCollection:obj options:nil];
@@ -111,17 +104,20 @@ RCT_EXPORT_METHOD(getAllImageList:(NSDictionary *)options
 {
     imageArray=[[NSArray alloc] init];
     __block NSMutableArray *albumArray = [NSMutableArray array];
-    PHFetchResult *result;
-    result = [PHAssetCollection fetchAssetCollectionsWithType:PHAssetCollectionTypeAlbum subtype:PHAssetCollectionSubtypeAlbumRegular options:nil];
+    PHFetchResult *result = [PHAssetCollection fetchAssetCollectionsWithType:PHAssetCollectionTypeAlbum subtype:PHAssetCollectionSubtypeAlbumRegular options:nil];
     for (PHAssetCollection *obj in result) {
         [albumArray addObject:obj.localizedTitle];
     }
-    
-    
+    NSMutableDictionary *resultDictionary = [[NSMutableDictionary alloc] init];
     PHFetchOptions *fetchOptions = [[PHFetchOptions alloc] init];
-
     PHFetchResult *results = [PHAsset fetchAssetsWithOptions:fetchOptions];
     __block NSMutableArray *list = [NSMutableArray array];
+    
+    if (results.count == 0){
+        [resultDictionary setObject:albumArray forKey:@"albums"];
+        [resultDictionary setObject:list forKey:@"images"];
+        resolve(resultDictionary);
+    }
     
     [results enumerateObjectsUsingBlock:^(PHAsset *asset, NSUInteger idx, BOOL * _Nonnull stop) {
         __block NSMutableDictionary *imageObj = [[NSMutableDictionary alloc] init];
@@ -137,7 +133,6 @@ RCT_EXPORT_METHOD(getAllImageList:(NSDictionary *)options
         [list addObject:imageObj];
         
         if (results.count - 1 == idx) {
-            NSMutableDictionary *resultDictionary = [[NSMutableDictionary alloc] init];
             [resultDictionary setObject:albumArray forKey:@"albums"];
             [resultDictionary setObject:list forKey:@"images"];
             //                                    NSLog( @"list ===> %@ \n", resultDictionary);
@@ -162,7 +157,10 @@ RCT_EXPORT_METHOD(getImagesByAlbumName:(NSDictionary *)options
         NSMutableDictionary *albums = [[NSMutableDictionary alloc] init];
         PHFetchResult *collectionResult = [PHAsset fetchAssetsInAssetCollection:collection options:nil];
         __block NSMutableArray *list = [NSMutableArray array];
-        
+        NSLog(@"DATA %d", collectionResult.count);
+        if (collectionResult.count == 0){
+            resolve(list);
+        }
         [collectionResult enumerateObjectsUsingBlock:^(PHAsset *asset, NSUInteger idx, BOOL *stop) {
             
             __block NSMutableDictionary *imageObj = [[NSMutableDictionary alloc] init];
