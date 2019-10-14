@@ -37,7 +37,7 @@ RCT_EXPORT_METHOD(getAllAlbumWithData:(NSDictionary *)options
             albumName = [NSMutableArray array];
             albumWithData = [NSMutableArray array];
             dictionary = [[NSMutableDictionary alloc] init];
-
+            
             result = [PHAssetCollection fetchAssetCollectionsWithType:PHAssetCollectionTypeAlbum subtype:PHAssetCollectionSubtypeAlbumRegular options:nil];
             for (PHAssetCollection *obj in result) {
                 [albumName addObject:obj.localizedTitle];
@@ -64,6 +64,7 @@ RCT_EXPORT_METHOD(getAllAlbumWithData:(NSDictionary *)options
                 
                 [collectionResult enumerateObjectsUsingBlock:^(PHAsset *asset, NSUInteger idx, BOOL *stop) {
                     
+                    NSLog(@"LIST ==> %@", asset);
                     
                     __block NSMutableDictionary *imageObj = [[NSMutableDictionary alloc] init];
                     NSMutableDictionary *image = [[NSMutableDictionary alloc] init];
@@ -110,6 +111,9 @@ RCT_EXPORT_METHOD(getAllImageList:(NSDictionary *)options
     }
     NSMutableDictionary *resultDictionary = [[NSMutableDictionary alloc] init];
     PHFetchOptions *fetchOptions = [[PHFetchOptions alloc] init];
+    NSSortDescriptor *descriptor = [NSSortDescriptor sortDescriptorWithKey:@"creationDate" ascending:false];
+    fetchOptions.sortDescriptors = [NSArray arrayWithObject:descriptor];
+    
     PHFetchResult *results = [PHAsset fetchAssetsWithOptions:fetchOptions];
     __block NSMutableArray *list = [NSMutableArray array];
     
@@ -131,7 +135,6 @@ RCT_EXPORT_METHOD(getAllImageList:(NSDictionary *)options
         [node setObject:image forKey:@"image"];
         [imageObj setObject:node forKey:@"node"];
         [list addObject:imageObj];
-        
         if (results.count - 1 == idx) {
             [resultDictionary setObject:albumArray forKey:@"albums"];
             [resultDictionary setObject:list forKey:@"images"];
@@ -157,11 +160,36 @@ RCT_EXPORT_METHOD(getImagesByAlbumName:(NSDictionary *)options
         NSMutableDictionary *albums = [[NSMutableDictionary alloc] init];
         PHFetchResult *collectionResult = [PHAsset fetchAssetsInAssetCollection:collection options:nil];
         __block NSMutableArray *list = [NSMutableArray array];
-        NSLog(@"DATA %d", collectionResult.count);
         if (collectionResult.count == 0){
             resolve(list);
         }
-        [collectionResult enumerateObjectsUsingBlock:^(PHAsset *asset, NSUInteger idx, BOOL *stop) {
+        
+        NSMutableArray<PHAsset *> *photos = [@[] mutableCopy];
+        for(PHAsset *asset in collectionResult){
+            [photos addObject:asset];
+        }
+        [photos sortUsingDescriptors:@[[NSSortDescriptor sortDescriptorWithKey:@"creationDate"
+                                                                     ascending:NO
+                                                                    comparator:^NSComparisonResult(NSDate *dateTime1, NSDate *dateTime2) {
+            unsigned int flags = NSCalendarUnitYear | NSCalendarUnitMonth | NSCalendarUnitDay;
+            NSCalendar* calendar = [NSCalendar currentCalendar];
+            
+            NSDateComponents* components1 = [calendar components:flags fromDate:dateTime1];
+            NSDate* date1 = [calendar dateFromComponents:components1];
+            
+            NSDateComponents* components2 = [calendar components:flags fromDate:dateTime2];
+            NSDate* date2 = [calendar dateFromComponents:components2];
+            
+            NSComparisonResult comparedDates = [date1 compare:date2];
+            if(comparedDates == NSOrderedSame)
+            {
+                return [dateTime2 compare:dateTime1];
+            }
+            return comparedDates;
+        }
+                                        ]]];
+        
+        [photos enumerateObjectsUsingBlock:^(PHAsset *asset, NSUInteger idx, BOOL *stop) {
             
             __block NSMutableDictionary *imageObj = [[NSMutableDictionary alloc] init];
             NSMutableDictionary *image = [[NSMutableDictionary alloc] init];
@@ -246,3 +274,5 @@ static BOOL isAlbumTypeSupported(PHAssetCollectionSubtype type) {
             return NO;
     }
 }
+
+
