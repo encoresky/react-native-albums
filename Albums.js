@@ -21,6 +21,9 @@ type albumListOptions = {
 };
 
 export default {
+    getAlbumList(options: albumListOptions = {}) {
+        return NativeModules.RNAlbumsModule.getAlbumList(options);
+    },
     //get all album with image data
     getAllAlbumWithData(options: albumListOptions = {}) {
         return NativeModules.RNAlbumsModule.getAllAlbumWithData(options);
