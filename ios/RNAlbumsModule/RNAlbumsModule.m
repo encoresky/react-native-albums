@@ -64,8 +64,6 @@ RCT_EXPORT_METHOD(getAllAlbumWithData:(NSDictionary *)options
                 
                 [collectionResult enumerateObjectsUsingBlock:^(PHAsset *asset, NSUInteger idx, BOOL *stop) {
                     
-                    NSLog(@"LIST ==> %@", asset);
-                    
                     __block NSMutableDictionary *imageObj = [[NSMutableDictionary alloc] init];
                     NSMutableDictionary *image = [[NSMutableDictionary alloc] init];
                     NSMutableDictionary *node = [[NSMutableDictionary alloc] init];
@@ -129,6 +127,12 @@ RCT_EXPORT_METHOD(getAllImageList:(NSDictionary *)options
         NSMutableDictionary *node = [[NSMutableDictionary alloc] init];
         
         NSString *path = [NSString stringWithFormat:@"ph://%@", asset.localIdentifier];
+        NSArray<PHAssetResource *> *const assetResources = [PHAssetResource assetResourcesForAsset:asset];
+        if ([assetResources firstObject]) {
+            PHAssetResource *const _Nonnull resource = [assetResources firstObject];
+            [image setObject:  resource.originalFilename forKey:@"filename"];
+        }
+        
         NSString *assetType = [asset mediaType] == PHAssetMediaTypeImage ? @"image" : @"video";
         [image setObject:path forKey:@"uri"];
         [node setObject:assetType forKey:@"type"];
@@ -195,6 +199,12 @@ RCT_EXPORT_METHOD(getImagesByAlbumName:(NSDictionary *)options
             NSMutableDictionary *image = [[NSMutableDictionary alloc] init];
             NSMutableDictionary *node = [[NSMutableDictionary alloc] init];
             NSString *path = [NSString stringWithFormat:@"ph://%@", asset.localIdentifier];
+            NSArray<PHAssetResource *> *const assetResources = [PHAssetResource assetResourcesForAsset:asset];
+            if ([assetResources firstObject]) {
+                PHAssetResource *const _Nonnull resource = [assetResources firstObject];
+                [image setObject:  resource.originalFilename forKey:@"filename"];
+            }
+            
             
             NSString *assetType = [asset mediaType] == PHAssetMediaTypeImage ? @"image" : @"video";
             [image setObject:path forKey:@"uri"];
@@ -274,5 +284,3 @@ static BOOL isAlbumTypeSupported(PHAssetCollectionSubtype type) {
             return NO;
     }
 }
-
-
