@@ -132,18 +132,45 @@ RCT_EXPORT_METHOD(getAllImageList:(NSDictionary *)options
             PHAssetResource *const _Nonnull resource = [assetResources firstObject];
             [image setObject:  resource.originalFilename forKey:@"filename"];
         }
-        
         NSString *assetType = [asset mediaType] == PHAssetMediaTypeImage ? @"image" : @"video";
-        [image setObject:path forKey:@"uri"];
         [node setObject:assetType forKey:@"type"];
-        [node setObject:image forKey:@"image"];
-        [imageObj setObject:node forKey:@"node"];
-        [list addObject:imageObj];
-        if (results.count - 1 == idx) {
-            [resultDictionary setObject:albumArray forKey:@"albums"];
-            [resultDictionary setObject:list forKey:@"images"];
-            //                                    NSLog( @"list ===> %@ \n", resultDictionary);
-            resolve(resultDictionary);
+        
+        
+        if ([asset mediaType] == PHAssetMediaTypeVideo) {
+            [[PHImageManager defaultManager] requestAVAssetForVideo:asset options:nil resultHandler:^(AVAsset * _Nullable asset, AVAudioMix * _Nullable audioMix, NSDictionary * _Nullable info) {
+                NSURL *url = (NSURL *)[[(AVURLAsset *)asset URL] fileReferenceURL];
+                if ([url relativePath]) {
+                    NSString *combined = [NSString stringWithFormat:@"file://%@", [url relativePath]];
+                    [image setObject:combined forKey:@"uri"];
+                    [image setObject:path forKey:@"thumburi"];
+                    [node setObject:image forKey:@"image"];
+                    [imageObj setObject:node forKey:@"node"];
+                    [list addObject:imageObj];
+                }
+                if (results.count - 1 == idx) {
+                        [resultDictionary setObject:albumArray forKey:@"albums"];
+                        [resultDictionary setObject:list forKey:@"images"];
+                        //                                    NSLog( @"list ===> %@ \n", resultDictionary);
+                        resolve(resultDictionary);
+                    }
+            }];
+        }else{
+            [[PHImageManager defaultManager] requestImageDataForAsset:asset options:nil resultHandler:^(NSData * _Nullable imageData, NSString * _Nullable dataUTI, UIImageOrientation orientation, NSDictionary * _Nullable info) {
+                NSString *uri = [info[@"PHImageFileURLKey"] absoluteString];
+                if (uri) {
+                    [image setObject:uri forKey:@"uri"];
+                }else{
+                    [image setObject:path forKey:@"uri"];
+                }
+                [node setObject:image forKey:@"image"];
+                [imageObj setObject:node forKey:@"node"];
+                [list addObject:imageObj];
+                if (results.count - 1 == idx) {
+                        [resultDictionary setObject:albumArray forKey:@"albums"];
+                        [resultDictionary setObject:list forKey:@"images"];
+                        resolve(resultDictionary);
+                    }
+            }];
         }
     }];
 }
@@ -200,22 +227,43 @@ RCT_EXPORT_METHOD(getImagesByAlbumName:(NSDictionary *)options
             NSMutableDictionary *node = [[NSMutableDictionary alloc] init];
             NSString *path = [NSString stringWithFormat:@"ph://%@", asset.localIdentifier];
             NSArray<PHAssetResource *> *const assetResources = [PHAssetResource assetResourcesForAsset:asset];
-            if ([assetResources firstObject]) {
+            if ([assetResources firstObject]) { 
                 PHAssetResource *const _Nonnull resource = [assetResources firstObject];
                 [image setObject:  resource.originalFilename forKey:@"filename"];
             }
-            
-            
             NSString *assetType = [asset mediaType] == PHAssetMediaTypeImage ? @"image" : @"video";
-            [image setObject:path forKey:@"uri"];
             [node setObject:assetType forKey:@"type"];
-            [node setObject:image forKey:@"image"];
-            [imageObj setObject:node forKey:@"node"];
-            [list addObject:imageObj];
-            if (collectionResult.count - 1 == idx) {
-                resolve(list);
+            if ([asset mediaType] == PHAssetMediaTypeVideo) {
+                [[PHImageManager defaultManager] requestAVAssetForVideo:asset options:nil resultHandler:^(AVAsset * _Nullable asset, AVAudioMix * _Nullable audioMix, NSDictionary * _Nullable info) {
+                    NSURL *url = (NSURL *)[[(AVURLAsset *)asset URL] fileReferenceURL];
+                    NSLog(@"url = %@", [url absoluteString]);
+                    NSLog(@"url = %@", [url relativePath]);
+                    NSString *combined = [NSString stringWithFormat:@"file://%@", [url relativePath]];
+                    [image setObject:combined forKey:@"uri"];
+                    [image setObject:path forKey:@"thumburi"];
+                    [node setObject:image forKey:@"image"];
+                    [imageObj setObject:node forKey:@"node"];
+                    [list addObject:imageObj];
+                    if (collectionResult.count - 1 == idx) {
+                        resolve(list);
+                    }
+                }];
+            }else{
+                [[PHImageManager defaultManager] requestImageDataForAsset:asset options:nil resultHandler:^(NSData * _Nullable imageData, NSString * _Nullable dataUTI, UIImageOrientation orientation, NSDictionary * _Nullable info) {
+                    NSString *uri = [info[@"PHImageFileURLKey"] absoluteString];
+                    if (uri) {
+                        [image setObject:uri forKey:@"uri"];
+                    }else{
+                        [image setObject:path forKey:@"uri"];
+                    }
+                    [node setObject:image forKey:@"image"];
+                    [imageObj setObject:node forKey:@"node"];
+                    [list addObject:imageObj];
+                    if (collectionResult.count - 1 == idx) {
+                        resolve(list);
+                    }
+                }];
             }
-            
         }];
     }else{
         
@@ -248,39 +296,3 @@ typedef void (^authorizeCompletion)(BOOL);
 }
 
 @end
-
-#pragma mark - 
-
-static NSString *albumNameFromType(PHAssetCollectionSubtype type) {
-    switch (type) {
-        case PHAssetCollectionSubtypeSmartAlbumUserLibrary: return @"UserLibrary";
-        case PHAssetCollectionSubtypeSmartAlbumSelfPortraits: return @"SelfPortraits";
-        case PHAssetCollectionSubtypeSmartAlbumRecentlyAdded: return @"RecentlyAdded";
-        case PHAssetCollectionSubtypeSmartAlbumTimelapses: return @"Timelapses";
-        case PHAssetCollectionSubtypeSmartAlbumPanoramas: return @"Panoramas";
-        case PHAssetCollectionSubtypeSmartAlbumFavorites: return @"Favorites";
-        case PHAssetCollectionSubtypeSmartAlbumScreenshots: return @"Screenshots";
-        case PHAssetCollectionSubtypeSmartAlbumBursts: return @"Bursts";
-        case PHAssetCollectionSubtypeSmartAlbumVideos: return @"Videos";
-        case PHAssetCollectionSubtypeSmartAlbumSlomoVideos: return @"SlomoVideos";
-        case PHAssetCollectionSubtypeSmartAlbumDepthEffect: return @"DepthEffect";
-        default: return @"null";
-    }
-}
-
-static BOOL isAlbumTypeSupported(PHAssetCollectionSubtype type) {
-    switch (type) {
-        case PHAssetCollectionSubtypeSmartAlbumUserLibrary:
-        case PHAssetCollectionSubtypeSmartAlbumSelfPortraits:
-        case PHAssetCollectionSubtypeSmartAlbumRecentlyAdded:
-        case PHAssetCollectionSubtypeSmartAlbumTimelapses:
-        case PHAssetCollectionSubtypeSmartAlbumPanoramas:
-        case PHAssetCollectionSubtypeSmartAlbumFavorites:
-        case PHAssetCollectionSubtypeSmartAlbumScreenshots:
-        case PHAssetCollectionSubtypeSmartAlbumBursts:
-        case PHAssetCollectionSubtypeSmartAlbumDepthEffect:
-            return YES;
-        default:
-            return NO;
-    }
-}
