@@ -71,7 +71,6 @@ public class RNAlbumsModule extends ReactContextBaseJavaModule {
         while (cursor.moveToNext()) {
             tempAbsImagePath = cursor.getString(columnIndexDataUri);
             tempMediaType = cursor.getString(columnIndexDataType);
-//            Log.e(TAG, "getImages: tempAbsImagePath >> " + tempAbsImagePath);
 
             if (tempMediaType.equalsIgnoreCase("1")) {
                 tempMediaFolder = cursor.getString(columnIndexImageFolderName);
@@ -81,9 +80,6 @@ public class RNAlbumsModule extends ReactContextBaseJavaModule {
                 tempMediaFolder = cursor.getString(columnIndexVideoFolderName);
                 tempMediaType = "ALAssetTypeVideo";
             }
-//
-//            Log.e(TAG, "getImages: tempMediaFolder >> " + tempMediaFolder);
-//            Log.e(TAG, "getImages: tempMediaType >> " + tempMediaType);
 
             albumList.add(new MediaData(tempAbsImagePath, tempMediaType));
 
@@ -91,8 +87,6 @@ public class RNAlbumsModule extends ReactContextBaseJavaModule {
         Gson gson = new GsonBuilder().create();
         JsonArray myCustomArray = gson.toJsonTree(albumList).getAsJsonArray();
 
-//        Log.e(TAG, "getImages: albumList >> " + albumList);
-//        Log.e(TAG, "getImages: myCustomArray >> " + myCustomArray);
         promise.resolve(myCustomArray.toString());
     }
 
@@ -139,7 +133,6 @@ public class RNAlbumsModule extends ReactContextBaseJavaModule {
         while (cursor.moveToNext()) {
             tempAbsImagePath = cursor.getString(columnIndexDataUri);
             tempMediaType = cursor.getString(columnIndexDataType);
-//            Log.e(TAG, "getImages: tempAbsImagePath >> " + tempAbsImagePath);
 
             if (tempMediaType.equalsIgnoreCase("1")) {
                 tempMediaFolder = cursor.getString(columnIndexImageFolderName);
@@ -149,15 +142,11 @@ public class RNAlbumsModule extends ReactContextBaseJavaModule {
                 tempMediaFolder = cursor.getString(columnIndexVideoFolderName);
                 tempMediaType = "ALAssetTypeVideo";
             }
-//
-//            Log.e(TAG, "getImages: tempMediaFolder >> " + tempMediaFolder);
-//            Log.e(TAG, "getImages: tempMediaType >> " + tempMediaType);
-
 
             if (albumList.size() == 0)
                 isFolder = false;
             for (int i = 0; i < albumList.size(); i++) {
-                if (albumList.get(i).getStr_folder().equals(cursor.getString(columnIndexImageFolderName))) {
+                if (albumList.get(i).getStr_folder() != null && albumList.get(i).getStr_folder().equals(cursor.getString(columnIndexImageFolderName))) {
                     isFolder = true;
                     tempPosition = i;
                     break;
