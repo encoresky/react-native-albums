@@ -27,6 +27,7 @@ project.xcworkspace
 .gradle
 local.properties
 build
+.history
 
 # node.js
 #
